@@ -2,185 +2,203 @@ HTML<!doctype html>
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Звонки (WebRTC + Opus) — без сервера</title>
-  <meta name="description" content="Аудиозвонки через WebRTC и Opus без собственного сервера. Работает на статическом хостинге (Vercel/Replit)." />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <title>messenger</title>
+  <meta name="description" content="messenger" />
   <link rel="icon" href="data:,">
   <style>
-    :root {
-      --bg: #0f1220;
-      --panel: #151934;
-      --text: #e9ecf1;
-      --muted: #a9b0c3;
-      --accent: #7c9cff;
+    :root{
+      --bg: #0e111a;
+      --panel: #141827;
+      --text: #e8edf5;
+      --muted: #a8b0c2;
+      --accent: #6c8cff;
       --ok: #34d399;
       --warn: #f59e0b;
       --err: #ef4444;
-      --border: #28304f;
+      --border: #22304b;
+      --barH: 64px;
     }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-      color: var(--text);
-      background: radial-gradient(1200px 1200px at 10% 10%, #151934 0%, #0f1220 45%, #0a0d1a 100%);
-      overflow-y: auto;
+    *{box-sizing: border-box; -webkit-tap-highlight-color: transparent;}
+    html, body {height: 100%; margin:0;}
+    body{
+      font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--text);
+      background: radial-gradient(1200px 1200px at 30% -10%, #161a2c 0%, var(--bg) 60%);
+      overscroll-behavior-y: contain;
     }
-    .wrap {
-      max-width: 900px;
-      margin: 32px auto;
-      padding: 0 16px;
+    .app{min-height:100vh; display:flex; flex-direction:column;}
+    .topbar{
+      position: sticky; top:0; z-index:20;
+      height:56px; display:flex; align-items:center; justify-content:center;
+      padding:0 max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
+      background: rgba(18, 22, 38, .9);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      font-weight: 700; letter-spacing:.2px;
     }
-    .card {
-      background: rgba(21, 25, 52, 0.88);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      backdrop-filter: blur(6px);
+    .content{
+      flex:1; padding: 12px 12px calc(var(--barH) + env(safe-area-inset-bottom) + 12px);
+      max-width: 720px; margin: 0 auto; width: 100%;
     }
-    h1 {
-      margin: 0 0 12px 0;
-      font-size: 22px; font-weight: 700;
-      display: flex; align-items: center; gap: 8px;
+    .card{
+      background: rgba(20,24,39,.9);
+      border:1px solid var(--border);
+      border-radius:14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
+      padding:14px;
     }
-    .sub { color: var(--muted); margin-bottom: 14px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .row > * { flex: 1 1 auto; }
-    input[type="text"] {
-      background: #0f132a;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      outline: none;
-      width: 100%;
-      transition: border-color .15s ease;
-      font-size: 15px;
+    .row{display:flex; gap:10px; align-items:stretch;}
+    .row.stack{flex-direction:column;}
+    input[type="text"]{
+      appearance:none; -webkit-appearance:none;
+      width:100%;
+      background:#0f1324;
+      color:var(--text);
+      border:1px solid var(--border);
+      border-radius:12px;
+      padding:14px 14px;
+      outline:none;
+      font-size:16px; /* предотвращает зум на iOS */
     }
-    input[type="text"]:focus { border-color: var(--accent); }
-    button {
-      background: linear-gradient(180deg, #6c8cff 0%, #5a7bff 100%);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform .06s ease, filter .2s ease;
-      user-select: none;
-      white-space: nowrap;
+    button{
+      appearance:none; -webkit-appearance:none;
+      border:none; border-radius:12px; padding:14px 14px; font-weight:700;
+      background: linear-gradient(180deg, #6e88ff 0%, #5a79ff 100%);
+      color:white; cursor:pointer; user-select:none;
+      min-height:48px;
+      transition: transform .06s ease, filter .2s ease, opacity .2s ease;
     }
-    button.secondary {
-      background: #21284a;
-      color: #dbe1ff;
-      border: 1px solid #2c3563;
+    button.secondary{
+      background:#1a2140; color:#e0e6ff; border:1px solid #2a3562;
     }
-    button:disabled { filter: grayscale(.6) brightness(.85); cursor: not-allowed; }
-    button:active { transform: translateY(1px); }
-    .grid {
-      display: grid; gap: 14px; margin-top: 16px;
-      grid-template-columns: repeat(12, 1fr);
+    button:active{ transform: translateY(1px); }
+    button:disabled{ opacity:.6; cursor:not-allowed; }
+    .status{
+      display:flex; flex-wrap:wrap; gap:8px; margin-top:10px;
     }
-    .panel {
-      background: #0f132a;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
+    .badge{
+      display:inline-flex; align-items:center; gap:6px;
+      border-radius:999px; padding:8px 10px; font-size:12px; font-weight:700;
+      border:1px solid var(--border); background:#121738; color:#dfe6ff;
     }
-    .panel h3 { margin: 0 0 10px 0; font-size: 14px; color: var(--muted); }
-    .status {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      font-size: 14px;
-    }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 600;
-      border: 1px solid var(--border);
-      background: #121738;
-      color: #dfe6ff;
-    }
-    .badge.ok { background: rgba(52, 211, 153, .12); color: #bbf7d0; border-color: rgba(52, 211, 153, .25); }
-    .badge.warn { background: rgba(245, 158, 11, .12); color: #fde68a; border-color: rgba(245, 158, 11, .25); }
-    .badge.err { background: rgba(239, 68, 68, .12); color: #fecaca; border-color: rgba(239, 68, 68, .25); }
-    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
-    .meter {
-      height: 10px; border-radius: 6px; background: #0c1124; border: 1px solid var(--border);
-      overflow: hidden; position: relative;
-    }
-    .meter > i {
-      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+    .badge.ok{ background: rgba(52,211,153,.14); color:#bbf7d0; border-color: rgba(52,211,153,.25); }
+    .badge.warn{ background: rgba(245,158,11,.14); color:#fde68a; border-color: rgba(245,158,11,.25); }
+    .badge.err{ background: rgba(239,68,68,.14); color:#fecaca; border-color: rgba(239,68,68,.25); }
+
+    .section{margin-top:12px;}
+    .label{font-size:13px; color:var(--muted); margin-bottom:6px;}
+
+    .meters{display:grid; grid-template-columns: 1fr; gap:10px; margin-top:8px;}
+    .meter{height:12px; border-radius:8px; background:#0b1022; border:1px solid var(--border); overflow:hidden; position:relative;}
+    .meter > i{
+      position:absolute; left:0; top:0; bottom:0; width:0%;
       background: linear-gradient(90deg, #34d399 0%, #f59e0b 60%, #ef4444 100%);
       transition: width .08s linear;
     }
-    .caption { color: var(--muted); font-size: 12px; margin-top: 6px; }
-    .small { font-size: 12px; color: var(--muted); }
-    code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; background: #0f132a; color: #dbe1ff; }
-    .logs { height: 160px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #0c1124; border-radius: 8px; border: 1px solid var(--border); padding: 10px; white-space: pre-wrap; }
-    .hint { color: var(--muted); }
-    @media (max-width: 860px) {
-      .grid { grid-template-columns: 1fr; }
+
+    details.panel{
+      margin-top:12px;
+      background:#0f1326; border:1px solid var(--border); border-radius:12px; overflow:hidden;
+    }
+    details.panel > summary{
+      list-style:none; cursor:pointer; padding:12px 14px; user-select:none; font-weight:700;
+      outline:none;
+    }
+    details.panel > summary::-webkit-details-marker{display:none;}
+    details.panel[open] > summary{border-bottom:1px solid var(--border);}
+    .panel-body{padding:10px 14px;}
+    .kv{display:grid; grid-template-columns: 1fr; gap:6px; font-size:14px; color:var(--muted);}
+    code.mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; padding:2px 6px; border:1px solid var(--border); border-radius:6px; background:#0f1324; color:#dbe1ff;}
+
+    .logs{ height:200px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:12px; background:#0b1022; border:1px solid var(--border); border-radius:8px; padding:10px; white-space:pre-wrap; }
+
+    .bottombar{
+      position: fixed; left:0; right:0; bottom:0; z-index:30;
+      height: var(--barH);
+      padding: 8px max(12px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      background: rgba(18,22,38,.92); backdrop-filter: blur(10px);
+      border-top:1px solid var(--border);
+      display:flex; gap:10px;
+    }
+    .bottombar button{ flex:1; min-height:48px; }
+    .danger{ background: linear-gradient(180deg, #ff5a5a 0%, #ef4444 100%); }
+    .muted{ filter: saturate(.6) brightness(.9); }
+
+    /* крупные тач-цели на очень маленьких экранах */
+    @media (max-width: 380px){
+      .topbar{height:52px;}
+      .bottombar{height:60px;}
+      .content{padding-left:10px; padding-right:10px;}
+      input[type="text"], button{padding:12px;}
     }
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="card">
-    <h1>🔊 Веб-звонки на Opus (WebRTC, без сервера)</h1>
-    <div class="sub">Одностраничный мессенджер для аудио-звонков. Разворачивается как статик (Vercel/Replit). Сигналинг — бесплатный облачный PeerJS; NAT — публичные STUN. Кодек по умолчанию — Opus 48 kHz.</div>
+<div class="app">
+  <div class="topbar">messenger</div>
 
-    <div class="row" style="margin-bottom: 10px;">
-      <input id="callId" type="text" placeholder="ID звонка (например: team-42)" autocomplete="off" />
-      <button id="startBtn">Старт / Подключиться</button>
-      <button id="copyBtn" class="secondary" title="Скопировать ссылку с ID">Скопировать ссылку</button>
-    </div>
+  <main class="content">
+    <div class="card">
+      <div class="row stack">
+        <input id="callId" type="text" placeholder="ID звонка (например: team-42)" autocomplete="off" inputmode="text" />
+        <div class="row">
+          <button id="startBtn">Старт / Подключиться</button>
+          <button id="copyBtn" class="secondary" title="Скопировать ссылку с ID">Скопировать</button>
+        </div>
+      </div>
 
-    <div class="grid">
-      <div class="panel" style="grid-column: span 8;">
-        <h3>Статус</h3>
-        <div class="status" id="status">
-          <span class="badge">Не запущено</span>
-        </div>
-        <div class="controls" style="margin-top: 12px;">
-          <button id="muteBtn" class="secondary" disabled>Выключить микрофон</button>
-          <button id="hangBtn" class="secondary" disabled>Завершить</button>
-        </div>
-        <div class="row" style="margin-top: 12px;">
-          <div style="flex:1">
-            <div class="small">Локальный уровень</div>
+      <div class="section">
+        <div class="label">Статус</div>
+        <div class="status" id="status"><span class="badge">Не запущено</span></div>
+      </div>
+
+      <div class="section">
+        <div class="label">Уровни сигнала</div>
+        <div class="meters">
+          <div>
+            <div class="label" style="margin:0 0 6px 0;">Мой микрофон</div>
             <div class="meter"><i id="mLocal"></i></div>
           </div>
-          <div style="flex:1">
-            <div class="small">Удалённый уровень</div>
+          <div>
+            <div class="label" style="margin:10px 0 6px 0;">Собеседник</div>
             <div class="meter"><i id="mRemote"></i></div>
           </div>
         </div>
       </div>
 
-      <div class="panel" style="grid-column: span 4;">
-        <h3>Текущая сессия</h3>
-        <div class="small">Роль: <span id="role">—</span></div>
-        <div class="small">ID звонка: <code id="cid" class="mono">—</code></div>
-        <div class="small">Codec (inbound): <span id="codec" class="badge warn">неизвестно</span></div>
-        <div class="small">ICE: <span id="ice" class="badge">—</span></div>
-        <div class="hint" style="margin-top:10px;">
-          Ссылка на звонок хранится в URL (#id). Отправьте её собеседнику — при открытии страницы с тем же ID второй участник подключится автоматически.
+      <details class="panel">
+        <summary>Детали сессии</summary>
+        <div class="panel-body">
+          <div class="kv">
+            <div>Роль: <span id="role">—</span></div>
+            <div>ID звонка: <code id="cid" class="mono">—</code></div>
+            <div>Codec (inbound): <span id="codec" class="badge warn">неизвестно</span></div>
+            <div>ICE: <span id="ice" class="badge">—</span></div>
+          </div>
         </div>
-      </div>
+      </details>
 
-      <div class="panel" style="grid-column: span 12;">
-        <h3>Логи</h3>
-        <div class="logs" id="logs"></div>
-      </div>
+      <details class="panel">
+        <summary>Логи</summary>
+        <div class="panel-body">
+          <div class="logs" id="logs"></div>
+        </div>
+      </details>
     </div>
-  </div>
+  </main>
+
+  <nav class="bottombar">
+    <button id="muteBtn" class="secondary" disabled>Выключить микрофон</button>
+    <button id="hangBtn" class="danger" disabled>Завершить</button>
+  </nav>
 </div>
 
-<!-- Скрытые аудио элементы -->
+<!-- Скрытые аудио -->
 <audio id="localAudio" autoplay muted playsinline></audio>
 <audio id="remoteAudio" autoplay playsinline></audio>
 
-<!-- PeerJS с CDN (облачный сигнальный сервер 0.peerjs.com) -->
+<!-- PeerJS с CDN -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
 (() => {
@@ -209,7 +227,6 @@ HTML<!doctype html>
   ];
   const PEER_OPTS = {
     debug: 1,
-    // signaling — облачный сервер PeerJS (0.peerjs.com) по умолчанию
     config: { iceServers: ICE_SERVERS }
   };
 
@@ -218,7 +235,7 @@ HTML<!doctype html>
   let call = null;
   let localStream = null;
   let statsTimer = null;
-  let audioCtx, localAnalyser, remoteAnalyser, rafId;
+  let audioCtx, rafId;
 
   const log = (...args) => {
     const msg = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
@@ -268,15 +285,16 @@ HTML<!doctype html>
   const setupAudioMeters = (localStream, remoteStream) => {
     try {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const createMeter = (stream, analyserRef, meterEl) => {
-        const source = audioCtx.createMediaStreamSource(stream);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyserRef.node = analyser;
-        source.connect(analyser);
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        const draw = () => {
-          analyser.getByteTimeDomainData(data);
+      const draws = [];
+      const addMeter = (stream, meterEl) => {
+        if (!stream) return;
+        const src = audioCtx.createMediaStreamSource(stream);
+        const an = audioCtx.createAnalyser();
+        an.fftSize = 256;
+        src.connect(an);
+        const data = new Uint8Array(an.frequencyBinCount);
+        return () => {
+          an.getByteTimeDomainData(data);
           let peak = 0;
           for (let i = 0; i < data.length; i++) {
             const v = (data[i] - 128) / 128;
@@ -285,17 +303,12 @@ HTML<!doctype html>
           const pct = Math.min(100, Math.max(0, Math.round(peak * 160)));
           meterEl.style.width = pct + '%';
         };
-        return draw;
       };
-      localAnalyser = {};
-      remoteAnalyser = {};
-      const draws = [];
-      if (localStream) draws.push(createMeter(localStream, localAnalyser, els.mLocal));
-      if (remoteStream) draws.push(createMeter(remoteStream, remoteAnalyser, els.mRemote));
-      const loop = () => {
-        draws.forEach(fn => fn());
-        rafId = requestAnimationFrame(loop);
-      };
+      const d1 = addMeter(localStream, els.mLocal);
+      const d2 = addMeter(remoteStream, els.mRemote);
+      if (d1) draws.push(d1);
+      if (d2) draws.push(d2);
+      const loop = () => { draws.forEach(fn => fn()); rafId = requestAnimationFrame(loop); };
       loop();
     } catch (e) {
       log('Meters init error:', e?.message || e);
@@ -361,9 +374,7 @@ HTML<!doctype html>
           els.ice.textContent = text;
           els.ice.className = 'badge';
         }
-      } catch (e) {
-        // ignore single errors
-      }
+      } catch (e) { /* ignore */ }
     }, 1500);
   };
 
@@ -491,8 +502,7 @@ HTML<!doctype html>
   };
 
   const startOrJoin = async () => {
-    els.startBtn.disabled = true;
-    els.copyBtn.disabled = true;
+    els.startBtn.disabled = true; els.copyBtn.disabled = true;
     setStatus(badge('Инициализация…'));
 
     let callId = sanitizeId(els.callId.value);
@@ -523,14 +533,9 @@ HTML<!doctype html>
     }
 
     if (!hosting) {
-      // Хост уже есть — звоним
-      try {
-        await becomeCaller(hostId);
-      } catch (e) {
-        setStatus(badge('Не удалось дозвониться', 'err'));
-      }
+      try { await becomeCaller(hostId); }
+      catch (e) { setStatus(badge('Не удалось дозвониться', 'err')); }
     } else {
-      // Мы — хост и ждём
       setStatus(badge('Ждём второго участника…', 'warn'));
     }
 
@@ -549,6 +554,7 @@ HTML<!doctype html>
     if (!track) return;
     track.enabled = !track.enabled;
     els.muteBtn.textContent = track.enabled ? 'Выключить микрофон' : 'Включить микрофон';
+    els.muteBtn.classList.toggle('muted', !track.enabled);
   };
 
   // Wire UI
@@ -556,1173 +562,18 @@ HTML<!doctype html>
   els.copyBtn.addEventListener('click', copyLink);
   els.hangBtn.addEventListener('click', hangup);
   els.muteBtn.addEventListener('click', toggleMute);
+  els.callId.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); startOrJoin(); }
+  });
 
   // Автоподстановка ID из URL
   const hashId = decodeURIComponent((location.hash || '').replace(/^#/, ''));
-  if (hashId) {
-    els.callId.value = sanitizeId(hashId);
-  }
+  if (hashId) els.callId.value = sanitizeId(hashId);
 
-  // Полезные подсказки
-  log('Готово. Введите общий ID звонка и нажмите "Старт / Подключиться".');
-  log('Первый, кто зайдёт с ID, станет хостом (ожидание); второй — дозвонится к нему автоматически.');
-  log('Codec: В современных браузерах для аудио WebRTC по умолчанию выбирает Opus 48kHz.');
-  log('Под капотом: PeerJS (облачный signaling), STUN Google. Для жёстких NAT может понадобиться TURN (не входит).');
+  log('Готово. Введите общий ID и нажмите "Старт / Подключиться".');
+  log('Первый с ID — хост; второй — звонящий. По умолчанию используется кодек Opus 48 kHz.');
 })();
 </script>
 </body>
 </html>
 
-==================================================
-
-<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Звонки (WebRTC + Opus) — без сервера</title>
-  <meta name="description" content="Аудиозвонки через WebRTC и Opus без собственного сервера. Работает на статическом хостинге (Vercel/Replit)." />
-  <link rel="icon" href="data:,">
-  <style>
-    :root {
-      --bg: #0f1220;
-      --panel: #151934;
-      --text: #e9ecf1;
-      --muted: #a9b0c3;
-      --accent: #7c9cff;
-      --ok: #34d399;
-      --warn: #f59e0b;
-      --err: #ef4444;
-      --border: #28304f;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-      color: var(--text);
-      background: radial-gradient(1200px 1200px at 10% 10%, #151934 0%, #0f1220 45%, #0a0d1a 100%);
-      overflow-y: auto;
-    }
-    .wrap {
-      max-width: 900px;
-      margin: 32px auto;
-      padding: 0 16px;
-    }
-    .card {
-      background: rgba(21, 25, 52, 0.88);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      backdrop-filter: blur(6px);
-    }
-    h1 {
-      margin: 0 0 12px 0;
-      font-size: 22px; font-weight: 700;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .sub { color: var(--muted); margin-bottom: 14px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .row > * { flex: 1 1 auto; }
-    input[type="text"] {
-      background: #0f132a;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      outline: none;
-      width: 100%;
-      transition: border-color .15s ease;
-      font-size: 15px;
-    }
-    input[type="text"]:focus { border-color: var(--accent); }
-    button {
-      background: linear-gradient(180deg, #6c8cff 0%, #5a7bff 100%);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform .06s ease, filter .2s ease;
-      user-select: none;
-      white-space: nowrap;
-    }
-    button.secondary {
-      background: #21284a;
-      color: #dbe1ff;
-      border: 1px solid #2c3563;
-    }
-    button:disabled { filter: grayscale(.6) brightness(.85); cursor: not-allowed; }
-    button:active { transform: translateY(1px); }
-    .grid {
-      display: grid; gap: 14px; margin-top: 16px;
-      grid-template-columns: repeat(12, 1fr);
-    }
-    .panel {
-      background: #0f132a;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-    }
-    .panel h3 { margin: 0 0 10px 0; font-size: 14px; color: var(--muted); }
-    .status {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      font-size: 14px;
-    }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 600;
-      border: 1px solid var(--border);
-      background: #121738;
-      color: #dfe6ff;
-    }
-    .badge.ok { background: rgba(52, 211, 153, .12); color: #bbf7d0; border-color: rgba(52, 211, 153, .25); }
-    .badge.warn { background: rgba(245, 158, 11, .12); color: #fde68a; border-color: rgba(245, 158, 11, .25); }
-    .badge.err { background: rgba(239, 68, 68, .12); color: #fecaca; border-color: rgba(239, 68, 68, .25); }
-    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
-    .meter {
-      height: 10px; border-radius: 6px; background: #0c1124; border: 1px solid var(--border);
-      overflow: hidden; position: relative;
-    }
-    .meter > i {
-      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-      background: linear-gradient(90deg, #34d399 0%, #f59e0b 60%, #ef4444 100%);
-      transition: width .08s linear;
-    }
-    .caption { color: var(--muted); font-size: 12px; margin-top: 6px; }
-    .small { font-size: 12px; color: var(--muted); }
-    code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; background: #0f132a; color: #dbe1ff; }
-    .logs { height: 160px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #0c1124; border-radius: 8px; border: 1px solid var(--border); padding: 10px; white-space: pre-wrap; }
-    .hint { color: var(--muted); }
-    @media (max-width: 860px) {
-      .grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-<div class="wrap">
-  <div class="card">
-    <h1>🔊 Веб-звонки на Opus (WebRTC, без сервера)</h1>
-    <div class="sub">Одностраничный мессенджер для аудио-звонков. Разворачивается как статик (Vercel/Replit). Сигналинг — бесплатный облачный PeerJS; NAT — публичные STUN. Кодек по умолчанию — Opus 48 kHz.</div>
-
-    <div class="row" style="margin-bottom: 10px;">
-      <input id="callId" type="text" placeholder="ID звонка (например: team-42)" autocomplete="off" />
-      <button id="startBtn">Старт / Подключиться</button>
-      <button id="copyBtn" class="secondary" title="Скопировать ссылку с ID">Скопировать ссылку</button>
-    </div>
-
-    <div class="grid">
-      <div class="panel" style="grid-column: span 8;">
-        <h3>Статус</h3>
-        <div class="status" id="status">
-          <span class="badge">Не запущено</span>
-        </div>
-        <div class="controls" style="margin-top: 12px;">
-          <button id="muteBtn" class="secondary" disabled>Выключить микрофон</button>
-          <button id="hangBtn" class="secondary" disabled>Завершить</button>
-        </div>
-        <div class="row" style="margin-top: 12px;">
-          <div style="flex:1">
-            <div class="small">Локальный уровень</div>
-            <div class="meter"><i id="mLocal"></i></div>
-          </div>
-          <div style="flex:1">
-            <div class="small">Удалённый уровень</div>
-            <div class="meter"><i id="mRemote"></i></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="grid-column: span 4;">
-        <h3>Текущая сессия</h3>
-        <div class="small">Роль: <span id="role">—</span></div>
-        <div class="small">ID звонка: <code id="cid" class="mono">—</code></div>
-        <div class="small">Codec (inbound): <span id="codec" class="badge warn">неизвестно</span></div>
-        <div class="small">ICE: <span id="ice" class="badge">—</span></div>
-        <div class="hint" style="margin-top:10px;">
-          Ссылка на звонок хранится в URL (#id). Отправьте её собеседнику — при открытии страницы с тем же ID второй участник подключится автоматически.
-        </div>
-      </div>
-
-      <div class="panel" style="grid-column: span 12;">
-        <h3>Логи</h3>
-        <div class="logs" id="logs"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Скрытые аудио элементы -->
-<audio id="localAudio" autoplay muted playsinline></audio>
-<audio id="remoteAudio" autoplay playsinline></audio>
-
-<!-- PeerJS с CDN (облачный сигнальный сервер 0.peerjs.com) -->
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<script>
-(() => {
-  const els = {
-    callId: document.getElementById('callId'),
-    startBtn: document.getElementById('startBtn'),
-    copyBtn: document.getElementById('copyBtn'),
-    muteBtn: document.getElementById('muteBtn'),
-    hangBtn: document.getElementById('hangBtn'),
-    status: document.getElementById('status'),
-    cid: document.getElementById('cid'),
-    role: document.getElementById('role'),
-    codec: document.getElementById('codec'),
-    ice: document.getElementById('ice'),
-    logs: document.getElementById('logs'),
-    localAudio: document.getElementById('localAudio'),
-    remoteAudio: document.getElementById('remoteAudio'),
-    mLocal: document.getElementById('mLocal'),
-    mRemote: document.getElementById('mRemote'),
-  };
-
-  const ICE_SERVERS = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-  ];
-  const PEER_OPTS = {
-    debug: 1,
-    // signaling — облачный сервер PeerJS (0.peerjs.com) по умолчанию
-    config: { iceServers: ICE_SERVERS }
-  };
-
-  let peer = null;
-  let isHost = false;
-  let call = null;
-  let localStream = null;
-  let statsTimer = null;
-  let audioCtx, localAnalyser, remoteAnalyser, rafId;
-
-  const log = (...args) => {
-    const msg = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
-    const time = new Date().toLocaleTimeString();
-    els.logs.textContent += `[${time}] ${msg}\n`;
-    els.logs.scrollTop = els.logs.scrollHeight;
-    console.log('[LOG]', ...args);
-  };
-  const setStatus = (...badges) => {
-    els.status.innerHTML = '';
-    badges.forEach(b => els.status.appendChild(b));
-  };
-  const badge = (text, type='') => {
-    const s = document.createElement('span');
-    s.className = 'badge' + (type ? ' ' + type : '');
-    s.textContent = text;
-    return s;
-  };
-
-  const sanitizeId = (s) => (s || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
-
-  const randomId = () =>
-    Math.random().toString(36).slice(2, 6) + '-' + Math.random().toString(36).slice(2, 6);
-
-  const callHostId = (callId) => `call-${callId}-host`;
-
-  const updateUrlHash = (callId) => {
-    const url = location.origin + location.pathname + '#' + encodeURIComponent(callId);
-    history.replaceState(null, '', url);
-  };
-  const copyLink = async () => {
-    const callId = sanitizeId(els.callId.value);
-    if (!callId) return;
-    const url = location.origin + location.pathname + '#' + encodeURIComponent(callId);
-    try {
-      await navigator.clipboard.writeText(url);
-      setStatus(badge('Ссылка скопирована', 'ok'));
-    } catch {
-      setStatus(badge('Не удалось скопировать', 'err'));
-    }
-  };
-
-  const setupAudioMeters = (localStream, remoteStream) => {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const createMeter = (stream, analyserRef, meterEl) => {
-        const source = audioCtx.createMediaStreamSource(stream);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyserRef.node = analyser;
-        source.connect(analyser);
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        const draw = () => {
-          analyser.getByteTimeDomainData(data);
-          let peak = 0;
-          for (let i = 0; i < data.length; i++) {
-            const v = (data[i] - 128) / 128;
-            peak = Math.max(peak, Math.abs(v));
-          }
-          const pct = Math.min(100, Math.max(0, Math.round(peak * 160)));
-          meterEl.style.width = pct + '%';
-        };
-        return draw;
-      };
-      localAnalyser = {};
-      remoteAnalyser = {};
-      const draws = [];
-      if (localStream) draws.push(createMeter(localStream, localAnalyser, els.mLocal));
-      if (remoteStream) draws.push(createMeter(remoteStream, remoteAnalyser, els.mRemote));
-      const loop = () => {
-        draws.forEach(fn => fn());
-        rafId = requestAnimationFrame(loop);
-      };
-      loop();
-    } catch (e) {
-      log('Meters init error:', e?.message || e);
-    }
-  };
-
-  const stopMeters = () => {
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = null;
-    els.mLocal.style.width = '0%';
-    els.mRemote.style.width = '0%';
-    try { audioCtx && audioCtx.close(); } catch {}
-    audioCtx = null;
-  };
-
-  const getMedia = async () => {
-    const constraints = {
-      audio: {
-        channelCount: 2,
-        sampleRate: 48000,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      },
-      video: false
-    };
-    log('Запрашиваем доступ к микрофону…');
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    els.localAudio.srcObject = stream;
-    try { await els.localAudio.play(); } catch {}
-    return stream;
-  };
-
-  const startStatsMonitor = (pc) => {
-    clearInterval(statsTimer);
-    statsTimer = setInterval(async () => {
-      try {
-        const stats = await pc.getStats();
-        let codecLabel = null;
-        let selectedCandidatePairId = null, candidatePair = null, localCand = null, remoteCand = null;
-
-        stats.forEach(report => {
-          if (report.type === 'inbound-rtp' && report.kind === 'audio' && report.codecId) {
-            const codec = stats.get(report.codecId);
-            if (codec && codec.mimeType) codecLabel = codec.mimeType + (codec.sdpFmtpLine ? ` (${codec.sdpFmtpLine})` : '');
-          }
-          if (report.type === 'transport' && report.selectedCandidatePairId) {
-            selectedCandidatePairId = report.selectedCandidatePairId;
-          }
-        });
-        if (selectedCandidatePairId) candidatePair = stats.get(selectedCandidatePairId);
-        if (candidatePair) {
-          localCand = stats.get(candidatePair.localCandidateId);
-          remoteCand = stats.get(candidatePair.remoteCandidateId);
-        }
-
-        if (codecLabel) {
-          els.codec.textContent = codecLabel;
-          els.codec.className = 'badge ok';
-        }
-        if (localCand && remoteCand) {
-          const text = `${localCand.protocol || 'udp'} · ${localCand.candidateType} ⇄ ${remoteCand.candidateType}`;
-          els.ice.textContent = text;
-          els.ice.className = 'badge';
-        }
-      } catch (e) {
-        // ignore single errors
-      }
-    }, 1500);
-  };
-
-  const cleanup = () => {
-    if (call) { try { call.close(); } catch {} call = null; }
-    if (peer) { try { peer.destroy(); } catch {} peer = null; }
-    if (localStream) {
-      localStream.getTracks().forEach(t => { try { t.stop(); } catch {} });
-      localStream = null;
-    }
-    if (els.remoteAudio.srcObject) {
-      const rs = els.remoteAudio.srcObject;
-      if (rs && rs.getTracks) rs.getTracks().forEach(t => t.stop());
-      els.remoteAudio.srcObject = null;
-    }
-    els.localAudio.srcObject = null;
-    stopMeters();
-    clearInterval(statsTimer);
-    statsTimer = null;
-    els.muteBtn.disabled = true;
-    els.hangBtn.disabled = true;
-    els.muteBtn.textContent = 'Выключить микрофон';
-    setStatus(badge('Отключено'));
-    els.role.textContent = '—';
-    els.cid.textContent = '—';
-    els.codec.textContent = 'неизвестно';
-    els.codec.className = 'badge warn';
-    els.ice.textContent = '—';
-  };
-
-  const attachCallHandlers = (mc) => {
-    call = mc;
-    const pc = mc.peerConnection || mc._pc || null;
-
-    mc.on('stream', async (remoteStream) => {
-      log('Получен удалённый поток');
-      els.remoteAudio.srcObject = remoteStream;
-      try { await els.remoteAudio.play(); } catch {}
-      setupAudioMeters(localStream, remoteStream);
-      els.muteBtn.disabled = false;
-      els.hangBtn.disabled = false;
-      if (pc) startStatsMonitor(pc);
-    });
-
-    mc.on('close', () => {
-      log('Звонок завершён');
-      setStatus(badge('Звонок завершён', 'warn'));
-      cleanup();
-    });
-
-    mc.on('error', (e) => {
-      log('Ошибка звонка:', e?.type || e?.message || e);
-      setStatus(badge('Ошибка соединения', 'err'));
-    });
-
-    if (pc) {
-      pc.addEventListener('iceconnectionstatechange', () => {
-        log('ICE state:', pc.iceConnectionState);
-        if (pc.iceConnectionState === 'failed') {
-          els.ice.className = 'badge err';
-        }
-      });
-    }
-  };
-
-  const becomeHost = async (hostId) => {
-    return new Promise((resolve, reject) => {
-      peer = new Peer(hostId, PEER_OPTS);
-      peer.on('open', id => {
-        log('Мы — хост, ID:', id);
-        isHost = true;
-        els.role.textContent = 'Хост (ожидание)';
-        resolve(true);
-      });
-      peer.on('error', (e) => {
-        log('Peer error (host):', e?.type || e?.message || e);
-        if (e && (e.type === 'unavailable-id' || /taken|unavailable/i.test(e.message))) {
-          resolve(false); // ID занят — будем звонить
-        } else {
-          reject(e);
-        }
-      });
-      peer.on('call', (incoming) => {
-        log('Входящий звонок — отвечаем');
-        try {
-          incoming.answer(localStream, { metadata: { opus: true } });
-          attachCallHandlers(incoming);
-          setStatus(badge('Соединение установлено', 'ok'));
-          els.role.textContent = 'Хост (в звонке)';
-        } catch (e) {
-          log('Не удалось ответить:', e?.message || e);
-          setStatus(badge('Ошибка при ответе', 'err'));
-        }
-      });
-    });
-  };
-
-  const becomeCaller = async (hostId) => {
-    return new Promise((resolve, reject) => {
-      peer = new Peer(undefined, PEER_OPTS);
-      peer.on('open', () => {
-        log('Мы — звонящий, PeerID:', peer.id);
-        isHost = false;
-        els.role.textContent = 'Клиент (звонящий)';
-        try {
-          const mc = peer.call(hostId, localStream, { metadata: { opus: true } });
-          if (!mc) {
-            setStatus(badge('Хост не отвечает', 'warn'));
-            return reject(new Error('No media connection'));
-          }
-          attachCallHandlers(mc);
-          setStatus(badge('Звоним…'));
-          resolve(true);
-        } catch (e) {
-          log('Ошибка вызова:', e?.message || e);
-          setStatus(badge('Ошибка вызова', 'err'));
-          reject(e);
-        }
-      });
-      peer.on('error', (e) => {
-        log('Peer error (caller):', e?.type || e?.message || e);
-        setStatus(badge('Ошибка peer', 'err'));
-      });
-    });
-  };
-
-  const startOrJoin = async () => {
-    els.startBtn.disabled = true;
-    els.copyBtn.disabled = true;
-    setStatus(badge('Инициализация…'));
-
-    let callId = sanitizeId(els.callId.value);
-    if (!callId) callId = randomId();
-    els.callId.value = callId;
-    els.cid.textContent = callId;
-    updateUrlHash(callId);
-
-    try {
-      localStream = await getMedia();
-    } catch (e) {
-      log('Доступ к микрофону отклонён:', e?.message || e);
-      setStatus(badge('Нужен доступ к микрофону', 'err'));
-      els.startBtn.disabled = false; els.copyBtn.disabled = false;
-      return;
-    }
-
-    const hostId = callHostId(callId);
-    setStatus(badge('Подключаемся к сигнальному серверу…'));
-    let hosting;
-    try {
-      hosting = await becomeHost(hostId);
-    } catch (e) {
-      log('Ошибка сигнального сервера:', e?.message || e);
-      setStatus(badge('Сигналинг недоступен', 'err'));
-      els.startBtn.disabled = false; els.copyBtn.disabled = false;
-      return;
-    }
-
-    if (!hosting) {
-      // Хост уже есть — звоним
-      try {
-        await becomeCaller(hostId);
-      } catch (e) {
-        setStatus(badge('Не удалось дозвониться', 'err'));
-      }
-    } else {
-      // Мы — хост и ждём
-      setStatus(badge('Ждём второго участника…', 'warn'));
-    }
-
-    els.hangBtn.disabled = false;
-    els.copyBtn.disabled = false;
-  };
-
-  const hangup = () => {
-    cleanup();
-    els.startBtn.disabled = false;
-  };
-
-  const toggleMute = () => {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    els.muteBtn.textContent = track.enabled ? 'Выключить микрофон' : 'Включить микрофон';
-  };
-
-  // Wire UI
-  els.startBtn.addEventListener('click', startOrJoin);
-  els.copyBtn.addEventListener('click', copyLink);
-  els.hangBtn.addEventListener('click', hangup);
-  els.muteBtn.addEventListener('click', toggleMute);
-
-  // Автоподстановка ID из URL
-  const hashId = decodeURIComponent((location.hash || '').replace(/^#/, ''));
-  if (hashId) {
-    els.callId.value = sanitizeId(hashId);
-  }
-
-  // Полезные подсказки
-  log('Готово. Введите общий ID звонка и нажмите "Старт / Подключиться".');
-  log('Первый, кто зайдёт с ID, станет хостом (ожидание); второй — дозвонится к нему автоматически.');
-  log('Codec: В современных браузерах для аудио WebRTC по умолчанию выбирает Opus 48kHz.');
-  log('Под капотом: PeerJS (облачный signaling), STUN Google. Для жёстких NAT может понадобиться TURN (не входит).');
-})();
-</script>
-</body>
-</html>
-
-==================================================
-
-<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Звонки (WebRTC + Opus) — без сервера</title>
-  <meta name="description" content="Аудиозвонки через WebRTC и Opus без собственного сервера. Работает на статическом хостинге (Vercel/Replit)." />
-  <link rel="icon" href="data:,">
-  <style>
-    :root {
-      --bg: #0f1220;
-      --panel: #151934;
-      --text: #e9ecf1;
-      --muted: #a9b0c3;
-      --accent: #7c9cff;
-      --ok: #34d399;
-      --warn: #f59e0b;
-      --err: #ef4444;
-      --border: #28304f;
-    }
-    * { box-sizing: border-box; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      font: 14px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-      color: var(--text);
-      background: radial-gradient(1200px 1200px at 10% 10%, #151934 0%, #0f1220 45%, #0a0d1a 100%);
-      overflow-y: auto;
-    }
-    .wrap {
-      max-width: 900px;
-      margin: 32px auto;
-      padding: 0 16px;
-    }
-    .card {
-      background: rgba(21, 25, 52, 0.88);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-      backdrop-filter: blur(6px);
-    }
-    h1 {
-      margin: 0 0 12px 0;
-      font-size: 22px; font-weight: 700;
-      display: flex; align-items: center; gap: 8px;
-    }
-    .sub { color: var(--muted); margin-bottom: 14px; }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .row > * { flex: 1 1 auto; }
-    input[type="text"] {
-      background: #0f132a;
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 12px 14px;
-      outline: none;
-      width: 100%;
-      transition: border-color .15s ease;
-      font-size: 15px;
-    }
-    input[type="text"]:focus { border-color: var(--accent); }
-    button {
-      background: linear-gradient(180deg, #6c8cff 0%, #5a7bff 100%);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      padding: 12px 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform .06s ease, filter .2s ease;
-      user-select: none;
-      white-space: nowrap;
-    }
-    button.secondary {
-      background: #21284a;
-      color: #dbe1ff;
-      border: 1px solid #2c3563;
-    }
-    button:disabled { filter: grayscale(.6) brightness(.85); cursor: not-allowed; }
-    button:active { transform: translateY(1px); }
-    .grid {
-      display: grid; gap: 14px; margin-top: 16px;
-      grid-template-columns: repeat(12, 1fr);
-    }
-    .panel {
-      background: #0f132a;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-    }
-    .panel h3 { margin: 0 0 10px 0; font-size: 14px; color: var(--muted); }
-    .status {
-      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-      font-size: 14px;
-    }
-    .badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      border-radius: 999px; padding: 6px 10px; font-size: 12px; font-weight: 600;
-      border: 1px solid var(--border);
-      background: #121738;
-      color: #dfe6ff;
-    }
-    .badge.ok { background: rgba(52, 211, 153, .12); color: #bbf7d0; border-color: rgba(52, 211, 153, .25); }
-    .badge.warn { background: rgba(245, 158, 11, .12); color: #fde68a; border-color: rgba(245, 158, 11, .25); }
-    .badge.err { background: rgba(239, 68, 68, .12); color: #fecaca; border-color: rgba(239, 68, 68, .25); }
-    .controls { display: flex; gap: 10px; flex-wrap: wrap; }
-    .meter {
-      height: 10px; border-radius: 6px; background: #0c1124; border: 1px solid var(--border);
-      overflow: hidden; position: relative;
-    }
-    .meter > i {
-      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
-      background: linear-gradient(90deg, #34d399 0%, #f59e0b 60%, #ef4444 100%);
-      transition: width .08s linear;
-    }
-    .caption { color: var(--muted); font-size: 12px; margin-top: 6px; }
-    .small { font-size: 12px; color: var(--muted); }
-    code.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; background: #0f132a; color: #dbe1ff; }
-    .logs { height: 160px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; background: #0c1124; border-radius: 8px; border: 1px solid var(--border); padding: 10px; white-space: pre-wrap; }
-    .hint { color: var(--muted); }
-    @media (max-width: 860px) {
-      .grid { grid-template-columns: 1fr; }
-    }
-  </style>
-</head>
-<body>
-<div class="wrap">
-  <div class="card">
-    <h1>🔊 Веб-звонки на Opus (WebRTC, без сервера)</h1>
-    <div class="sub">Одностраничный мессенджер для аудио-звонков. Разворачивается как статик (Vercel/Replit). Сигналинг — бесплатный облачный PeerJS; NAT — публичные STUN. Кодек по умолчанию — Opus 48 kHz.</div>
-
-    <div class="row" style="margin-bottom: 10px;">
-      <input id="callId" type="text" placeholder="ID звонка (например: team-42)" autocomplete="off" />
-      <button id="startBtn">Старт / Подключиться</button>
-      <button id="copyBtn" class="secondary" title="Скопировать ссылку с ID">Скопировать ссылку</button>
-    </div>
-
-    <div class="grid">
-      <div class="panel" style="grid-column: span 8;">
-        <h3>Статус</h3>
-        <div class="status" id="status">
-          <span class="badge">Не запущено</span>
-        </div>
-        <div class="controls" style="margin-top: 12px;">
-          <button id="muteBtn" class="secondary" disabled>Выключить микрофон</button>
-          <button id="hangBtn" class="secondary" disabled>Завершить</button>
-        </div>
-        <div class="row" style="margin-top: 12px;">
-          <div style="flex:1">
-            <div class="small">Локальный уровень</div>
-            <div class="meter"><i id="mLocal"></i></div>
-          </div>
-          <div style="flex:1">
-            <div class="small">Удалённый уровень</div>
-            <div class="meter"><i id="mRemote"></i></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel" style="grid-column: span 4;">
-        <h3>Текущая сессия</h3>
-        <div class="small">Роль: <span id="role">—</span></div>
-        <div class="small">ID звонка: <code id="cid" class="mono">—</code></div>
-        <div class="small">Codec (inbound): <span id="codec" class="badge warn">неизвестно</span></div>
-        <div class="small">ICE: <span id="ice" class="badge">—</span></div>
-        <div class="hint" style="margin-top:10px;">
-          Ссылка на звонок хранится в URL (#id). Отправьте её собеседнику — при открытии страницы с тем же ID второй участник подключится автоматически.
-        </div>
-      </div>
-
-      <div class="panel" style="grid-column: span 12;">
-        <h3>Логи</h3>
-        <div class="logs" id="logs"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Скрытые аудио элементы -->
-<audio id="localAudio" autoplay muted playsinline></audio>
-<audio id="remoteAudio" autoplay playsinline></audio>
-
-<!-- PeerJS с CDN (облачный сигнальный сервер 0.peerjs.com) -->
-<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-<script>
-(() => {
-  const els = {
-    callId: document.getElementById('callId'),
-    startBtn: document.getElementById('startBtn'),
-    copyBtn: document.getElementById('copyBtn'),
-    muteBtn: document.getElementById('muteBtn'),
-    hangBtn: document.getElementById('hangBtn'),
-    status: document.getElementById('status'),
-    cid: document.getElementById('cid'),
-    role: document.getElementById('role'),
-    codec: document.getElementById('codec'),
-    ice: document.getElementById('ice'),
-    logs: document.getElementById('logs'),
-    localAudio: document.getElementById('localAudio'),
-    remoteAudio: document.getElementById('remoteAudio'),
-    mLocal: document.getElementById('mLocal'),
-    mRemote: document.getElementById('mRemote'),
-  };
-
-  const ICE_SERVERS = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-  ];
-  const PEER_OPTS = {
-    debug: 1,
-    // signaling — облачный сервер PeerJS (0.peerjs.com) по умолчанию
-    config: { iceServers: ICE_SERVERS }
-  };
-
-  let peer = null;
-  let isHost = false;
-  let call = null;
-  let localStream = null;
-  let statsTimer = null;
-  let audioCtx, localAnalyser, remoteAnalyser, rafId;
-
-  const log = (...args) => {
-    const msg = args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ');
-    const time = new Date().toLocaleTimeString();
-    els.logs.textContent += `[${time}] ${msg}\n`;
-    els.logs.scrollTop = els.logs.scrollHeight;
-    console.log('[LOG]', ...args);
-  };
-  const setStatus = (...badges) => {
-    els.status.innerHTML = '';
-    badges.forEach(b => els.status.appendChild(b));
-  };
-  const badge = (text, type='') => {
-    const s = document.createElement('span');
-    s.className = 'badge' + (type ? ' ' + type : '');
-    s.textContent = text;
-    return s;
-  };
-
-  const sanitizeId = (s) => (s || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 48);
-
-  const randomId = () =>
-    Math.random().toString(36).slice(2, 6) + '-' + Math.random().toString(36).slice(2, 6);
-
-  const callHostId = (callId) => `call-${callId}-host`;
-
-  const updateUrlHash = (callId) => {
-    const url = location.origin + location.pathname + '#' + encodeURIComponent(callId);
-    history.replaceState(null, '', url);
-  };
-  const copyLink = async () => {
-    const callId = sanitizeId(els.callId.value);
-    if (!callId) return;
-    const url = location.origin + location.pathname + '#' + encodeURIComponent(callId);
-    try {
-      await navigator.clipboard.writeText(url);
-      setStatus(badge('Ссылка скопирована', 'ok'));
-    } catch {
-      setStatus(badge('Не удалось скопировать', 'err'));
-    }
-  };
-
-  const setupAudioMeters = (localStream, remoteStream) => {
-    try {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const createMeter = (stream, analyserRef, meterEl) => {
-        const source = audioCtx.createMediaStreamSource(stream);
-        const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 256;
-        analyserRef.node = analyser;
-        source.connect(analyser);
-        const data = new Uint8Array(analyser.frequencyBinCount);
-        const draw = () => {
-          analyser.getByteTimeDomainData(data);
-          let peak = 0;
-          for (let i = 0; i < data.length; i++) {
-            const v = (data[i] - 128) / 128;
-            peak = Math.max(peak, Math.abs(v));
-          }
-          const pct = Math.min(100, Math.max(0, Math.round(peak * 160)));
-          meterEl.style.width = pct + '%';
-        };
-        return draw;
-      };
-      localAnalyser = {};
-      remoteAnalyser = {};
-      const draws = [];
-      if (localStream) draws.push(createMeter(localStream, localAnalyser, els.mLocal));
-      if (remoteStream) draws.push(createMeter(remoteStream, remoteAnalyser, els.mRemote));
-      const loop = () => {
-        draws.forEach(fn => fn());
-        rafId = requestAnimationFrame(loop);
-      };
-      loop();
-    } catch (e) {
-      log('Meters init error:', e?.message || e);
-    }
-  };
-
-  const stopMeters = () => {
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = null;
-    els.mLocal.style.width = '0%';
-    els.mRemote.style.width = '0%';
-    try { audioCtx && audioCtx.close(); } catch {}
-    audioCtx = null;
-  };
-
-  const getMedia = async () => {
-    const constraints = {
-      audio: {
-        channelCount: 2,
-        sampleRate: 48000,
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      },
-      video: false
-    };
-    log('Запрашиваем доступ к микрофону…');
-    const stream = await navigator.mediaDevices.getUserMedia(constraints);
-    els.localAudio.srcObject = stream;
-    try { await els.localAudio.play(); } catch {}
-    return stream;
-  };
-
-  const startStatsMonitor = (pc) => {
-    clearInterval(statsTimer);
-    statsTimer = setInterval(async () => {
-      try {
-        const stats = await pc.getStats();
-        let codecLabel = null;
-        let selectedCandidatePairId = null, candidatePair = null, localCand = null, remoteCand = null;
-
-        stats.forEach(report => {
-          if (report.type === 'inbound-rtp' && report.kind === 'audio' && report.codecId) {
-            const codec = stats.get(report.codecId);
-            if (codec && codec.mimeType) codecLabel = codec.mimeType + (codec.sdpFmtpLine ? ` (${codec.sdpFmtpLine})` : '');
-          }
-          if (report.type === 'transport' && report.selectedCandidatePairId) {
-            selectedCandidatePairId = report.selectedCandidatePairId;
-          }
-        });
-        if (selectedCandidatePairId) candidatePair = stats.get(selectedCandidatePairId);
-        if (candidatePair) {
-          localCand = stats.get(candidatePair.localCandidateId);
-          remoteCand = stats.get(candidatePair.remoteCandidateId);
-        }
-
-        if (codecLabel) {
-          els.codec.textContent = codecLabel;
-          els.codec.className = 'badge ok';
-        }
-        if (localCand && remoteCand) {
-          const text = `${localCand.protocol || 'udp'} · ${localCand.candidateType} ⇄ ${remoteCand.candidateType}`;
-          els.ice.textContent = text;
-          els.ice.className = 'badge';
-        }
-      } catch (e) {
-        // ignore single errors
-      }
-    }, 1500);
-  };
-
-  const cleanup = () => {
-    if (call) { try { call.close(); } catch {} call = null; }
-    if (peer) { try { peer.destroy(); } catch {} peer = null; }
-    if (localStream) {
-      localStream.getTracks().forEach(t => { try { t.stop(); } catch {} });
-      localStream = null;
-    }
-    if (els.remoteAudio.srcObject) {
-      const rs = els.remoteAudio.srcObject;
-      if (rs && rs.getTracks) rs.getTracks().forEach(t => t.stop());
-      els.remoteAudio.srcObject = null;
-    }
-    els.localAudio.srcObject = null;
-    stopMeters();
-    clearInterval(statsTimer);
-    statsTimer = null;
-    els.muteBtn.disabled = true;
-    els.hangBtn.disabled = true;
-    els.muteBtn.textContent = 'Выключить микрофон';
-    setStatus(badge('Отключено'));
-    els.role.textContent = '—';
-    els.cid.textContent = '—';
-    els.codec.textContent = 'неизвестно';
-    els.codec.className = 'badge warn';
-    els.ice.textContent = '—';
-  };
-
-  const attachCallHandlers = (mc) => {
-    call = mc;
-    const pc = mc.peerConnection || mc._pc || null;
-
-    mc.on('stream', async (remoteStream) => {
-      log('Получен удалённый поток');
-      els.remoteAudio.srcObject = remoteStream;
-      try { await els.remoteAudio.play(); } catch {}
-      setupAudioMeters(localStream, remoteStream);
-      els.muteBtn.disabled = false;
-      els.hangBtn.disabled = false;
-      if (pc) startStatsMonitor(pc);
-    });
-
-    mc.on('close', () => {
-      log('Звонок завершён');
-      setStatus(badge('Звонок завершён', 'warn'));
-      cleanup();
-    });
-
-    mc.on('error', (e) => {
-      log('Ошибка звонка:', e?.type || e?.message || e);
-      setStatus(badge('Ошибка соединения', 'err'));
-    });
-
-    if (pc) {
-      pc.addEventListener('iceconnectionstatechange', () => {
-        log('ICE state:', pc.iceConnectionState);
-        if (pc.iceConnectionState === 'failed') {
-          els.ice.className = 'badge err';
-        }
-      });
-    }
-  };
-
-  const becomeHost = async (hostId) => {
-    return new Promise((resolve, reject) => {
-      peer = new Peer(hostId, PEER_OPTS);
-      peer.on('open', id => {
-        log('Мы — хост, ID:', id);
-        isHost = true;
-        els.role.textContent = 'Хост (ожидание)';
-        resolve(true);
-      });
-      peer.on('error', (e) => {
-        log('Peer error (host):', e?.type || e?.message || e);
-        if (e && (e.type === 'unavailable-id' || /taken|unavailable/i.test(e.message))) {
-          resolve(false); // ID занят — будем звонить
-        } else {
-          reject(e);
-        }
-      });
-      peer.on('call', (incoming) => {
-        log('Входящий звонок — отвечаем');
-        try {
-          incoming.answer(localStream, { metadata: { opus: true } });
-          attachCallHandlers(incoming);
-          setStatus(badge('Соединение установлено', 'ok'));
-          els.role.textContent = 'Хост (в звонке)';
-        } catch (e) {
-          log('Не удалось ответить:', e?.message || e);
-          setStatus(badge('Ошибка при ответе', 'err'));
-        }
-      });
-    });
-  };
-
-  const becomeCaller = async (hostId) => {
-    return new Promise((resolve, reject) => {
-      peer = new Peer(undefined, PEER_OPTS);
-      peer.on('open', () => {
-        log('Мы — звонящий, PeerID:', peer.id);
-        isHost = false;
-        els.role.textContent = 'Клиент (звонящий)';
-        try {
-          const mc = peer.call(hostId, localStream, { metadata: { opus: true } });
-          if (!mc) {
-            setStatus(badge('Хост не отвечает', 'warn'));
-            return reject(new Error('No media connection'));
-          }
-          attachCallHandlers(mc);
-          setStatus(badge('Звоним…'));
-          resolve(true);
-        } catch (e) {
-          log('Ошибка вызова:', e?.message || e);
-          setStatus(badge('Ошибка вызова', 'err'));
-          reject(e);
-        }
-      });
-      peer.on('error', (e) => {
-        log('Peer error (caller):', e?.type || e?.message || e);
-        setStatus(badge('Ошибка peer', 'err'));
-      });
-    });
-  };
-
-  const startOrJoin = async () => {
-    els.startBtn.disabled = true;
-    els.copyBtn.disabled = true;
-    setStatus(badge('Инициализация…'));
-
-    let callId = sanitizeId(els.callId.value);
-    if (!callId) callId = randomId();
-    els.callId.value = callId;
-    els.cid.textContent = callId;
-    updateUrlHash(callId);
-
-    try {
-      localStream = await getMedia();
-    } catch (e) {
-      log('Доступ к микрофону отклонён:', e?.message || e);
-      setStatus(badge('Нужен доступ к микрофону', 'err'));
-      els.startBtn.disabled = false; els.copyBtn.disabled = false;
-      return;
-    }
-
-    const hostId = callHostId(callId);
-    setStatus(badge('Подключаемся к сигнальному серверу…'));
-    let hosting;
-    try {
-      hosting = await becomeHost(hostId);
-    } catch (e) {
-      log('Ошибка сигнального сервера:', e?.message || e);
-      setStatus(badge('Сигналинг недоступен', 'err'));
-      els.startBtn.disabled = false; els.copyBtn.disabled = false;
-      return;
-    }
-
-    if (!hosting) {
-      // Хост уже есть — звоним
-      try {
-        await becomeCaller(hostId);
-      } catch (e) {
-        setStatus(badge('Не удалось дозвониться', 'err'));
-      }
-    } else {
-      // Мы — хост и ждём
-      setStatus(badge('Ждём второго участника…', 'warn'));
-    }
-
-    els.hangBtn.disabled = false;
-    els.copyBtn.disabled = false;
-  };
-
-  const hangup = () => {
-    cleanup();
-    els.startBtn.disabled = false;
-  };
-
-  const toggleMute = () => {
-    if (!localStream) return;
-    const track = localStream.getAudioTracks()[0];
-    if (!track) return;
-    track.enabled = !track.enabled;
-    els.muteBtn.textContent = track.enabled ? 'Выключить микрофон' : 'Включить микрофон';
-  };
-
-  // Wire UI
-  els.startBtn.addEventListener('click', startOrJoin);
-  els.copyBtn.addEventListener('click', copyLink);
-  els.hangBtn.addEventListener('click', hangup);
-  els.muteBtn.addEventListener('click', toggleMute);
-
-  // Автоподстановка ID из URL
-  const hashId = decodeURIComponent((location.hash || '').replace(/^#/, ''));
-  if (hashId) {
-    els.callId.value = sanitizeId(hashId);
-  }
-
-  // Полезные подсказки
-  log('Готово. Введите общий ID звонка и нажмите "Старт / Подключиться".');
-  log('Первый, кто зайдёт с ID, станет хостом (ожидание); второй — дозвонится к нему автоматически.');
-  log('Codec: В современных браузерах для аудио WebRTC по умолчанию выбирает Opus 48kHz.');
-  log('Под капотом: PeerJS (облачный signaling), STUN Google. Для жёстких NAT может понадобиться TURN (не входит).');
-})();
-</script>
-</body>
-</html>
